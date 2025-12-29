@@ -29,7 +29,7 @@ export default function LeaderboardPage() {
           event: parseAbiItem(
             "event TowerSaved(address indexed player, uint256 height, string structure)"
           ),
-          fromBlock: 0n,
+          fromBlock: BigInt(0),
           toBlock: "latest",
         });
 
