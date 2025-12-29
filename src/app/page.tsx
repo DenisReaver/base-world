@@ -299,7 +299,7 @@ Matter.Events.on(mouseConstraint, "enddrag", (event: any) => {
         </div>
         <div className="mt-8 flex flex-wrap justify-center items-center gap-8 text-xl">
           <div>Высота: <span className="font-bold text-blue-400">{currentHeight}</span></div>
-          {savedTower && savedTower.height > 0n && (
+          {savedTower && savedTower.height > BigInt(0) && (
   <div>
     Рекорд: <span className="font-bold text-green-400">{savedTower.height.toString()}</span>
   </div>
