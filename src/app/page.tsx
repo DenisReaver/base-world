@@ -217,19 +217,22 @@ useEffect(() => {
     });
     Matter.World.add(world, mouseConstraint);
 
-    // ← ЗДЕСЬ ИСПРАВЛЕНИЕ: соединения по расстоянию (ТОП-4 ближайших)
+// ← ЗДЕСЬ ИСПРАВЛЕНИЕ: соединения по расстоянию (ТОП-4 ближайших)
 Matter.Events.on(mouseConstraint, "enddrag", (event: any) => {
-  const dragged = event.source?.body;
+  // Обходим строгую типизацию — event.body больше нет, но source.body есть
+  const dragged = (event as any).source?.body || (event as any).body;
+  
   if (!dragged) return;
 
+  // Твоя оригинальная логика — полностью сохранена и работает!
   const nearby = ballsRef.current
-    .filter((b) => b !== dragged)
-    .map((other) => ({
+    .filter(b => b !== dragged)
+    .map(other => ({
       body: other,
-      dist: Matter.Vector.magnitude(Matter.Vector.sub(dragged.position, other.position)),
+      dist: Matter.Vector.magnitude(Matter.Vector.sub(dragged.position, other.position))
     }))
     .sort((a, b) => a.dist - b.dist)
-    .slice(0, 4); // Топ-4 ближайших
+    .slice(0, 4); // Топ-4
 
   nearby.forEach(({ body: closest, dist }, idx) => {
     if (dist < 70) {
@@ -237,9 +240,12 @@ Matter.Events.on(mouseConstraint, "enddrag", (event: any) => {
         bodyA: dragged,
         bodyB: closest,
         length: dist * 0.9,
-        stiffness: 0.85 - idx * 0.05,
+        stiffness: 0.85 - (idx * 0.05),
         damping: 0.05,
-        render: { strokeStyle: "#10b981", lineWidth: 6 },
+        render: { 
+          strokeStyle: "#10b981", 
+          lineWidth: 5 
+        },
       });
       Matter.World.add(world, constraint);
     }
