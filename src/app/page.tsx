@@ -218,34 +218,33 @@ useEffect(() => {
     Matter.World.add(world, mouseConstraint);
 
     // ← ЗДЕСЬ ИСПРАВЛЕНИЕ: соединения по расстоянию (ТОП-4 ближайших)
-    Matter.Events.on(mouseConstraint, "enddrag", (event) => {
-      const dragged = event.body;
-      if (!dragged) return;
+Matter.Events.on(mouseConstraint, "enddrag", (event: any) => {
+  const dragged = event.source?.body;
+  if (!dragged) return;
 
-      // Сортируем все шарики по расстоянию
-      const nearby = balls
-        .filter(b => b !== dragged)
-        .map(other => ({
-          body: other,
-          dist: Matter.Vector.magnitude(Matter.Vector.sub(dragged.position, other.position))
-        }))
-        .sort((a, b) => a.dist - b.dist)
-        .slice(0, 4); // Топ-4
+  const nearby = ballsRef.current
+    .filter((b) => b !== dragged)
+    .map((other) => ({
+      body: other,
+      dist: Matter.Vector.magnitude(Matter.Vector.sub(dragged.position, other.position)),
+    }))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 4); // Топ-4 ближайших
 
-      nearby.forEach(({ body: closest, dist }, idx) => {
-        if (dist < 70) {  // ← Порог: касание + немного
-          const constraint = Matter.Constraint.create({
-            bodyA: dragged,
-            bodyB: closest,
-            length: dist * 0.9,  // Чуть короче = натяжение
-            stiffness: 0.85 - (idx * 0.05),  // Центральные жёстче
-            damping: 0.05,
-            render: { strokeStyle: "#10b981", lineWidth: 5 },
-          });
-          Matter.World.add(world, constraint);
-        }
+  nearby.forEach(({ body: closest, dist }, idx) => {
+    if (dist < 70) {
+      const constraint = Matter.Constraint.create({
+        bodyA: dragged,
+        bodyB: closest,
+        length: dist * 0.9,
+        stiffness: 0.85 - idx * 0.05,
+        damping: 0.05,
+        render: { strokeStyle: "#10b981", lineWidth: 6 },
       });
-    });
+      Matter.World.add(world, constraint);
+    }
+  });
+});
 
     // Высота (мин Y)
     Matter.Events.on(engine, "afterUpdate", () => {
