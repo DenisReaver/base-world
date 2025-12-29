@@ -5,7 +5,7 @@ import { usePublicClient } from "wagmi";
 import { parseAbiItem } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
-// Замени на свой адрес контракта
+// Твой адрес контракта
 const CONTRACT_ADDRESS = "0xF97BCb49CD1Fd15CB8512CB90117661a8fF25424" as `0x${string}`;
 
 interface LeaderboardEntry {
@@ -23,7 +23,6 @@ export default function LeaderboardPage() {
       if (!publicClient) return;
 
       try {
-        // Загружаем все события TowerSaved
         const logs = await publicClient.getLogs({
           address: CONTRACT_ADDRESS,
           event: parseAbiItem(
@@ -33,29 +32,44 @@ export default function LeaderboardPage() {
           toBlock: "latest",
         });
 
-        // Парсим
-        const entries: LeaderboardEntry[] = logs.map((log) => ({
-          player: log.args.player,
-          height: log.args.height,
-        }));
+        // Безопасный парсинг с проверкой на undefined
+        const entries: LeaderboardEntry[] = logs
+          .map((log: any) => {
+            // Проверяем, что args существует и поля не undefined
+            if (
+              log.args &&
+              log.args.player &&
+              typeof log.args.player === "string" &&
+              log.args.height !== undefined &&
+              typeof log.args.height === "bigint"
+            ) {
+              return {
+                player: log.args.player,
+                height: log.args.height,
+              };
+            }
+            return null;
+          })
+          .filter((entry): entry is LeaderboardEntry => entry !== null);
 
-        // Лучший результат на игрока
+        // Лучший результат на игрока (исторический максимум)
         const bestPerPlayer = new Map<string, bigint>();
         entries.forEach((entry) => {
-          if (!bestPerPlayer.has(entry.player) || entry.height > bestPerPlayer.get(entry.player)!) {
+          const current = bestPerPlayer.get(entry.player);
+          if (!current || entry.height > current) {
             bestPerPlayer.set(entry.player, entry.height);
           }
         });
 
-        // ← ИЗМЕНЕНИЕ: ТОП-3 вместо 10
+        // ТОП-3
         const top3 = Array.from(bestPerPlayer.entries())
           .sort((a, b) => Number(b[1] - a[1]))
-          .slice(0, 3)  // ← Только 3!
+          .slice(0, 3)
           .map(([player, height]) => ({ player, height }));
 
         setLeaders(top3);
       } catch (error) {
-        console.error("Ошибка:", error);
+        console.error("Ошибка загрузки лидерборда:", error);
       } finally {
         setLoading(false);
       }
@@ -64,7 +78,7 @@ export default function LeaderboardPage() {
     loadLeaderboard();
   }, [publicClient]);
 
-  // Реал-тайм обновление
+  // Реал-тайм обновление при новом сохранении
   useEffect(() => {
     if (!publicClient) return;
 
@@ -73,7 +87,10 @@ export default function LeaderboardPage() {
       event: parseAbiItem(
         "event TowerSaved(address indexed player, uint256 height, string structure)"
       ),
-      onLogs: () => window.location.reload(),
+      onLogs: () => {
+        // Простой способ обновления — перезагрузка страницы
+        window.location.reload();
+      },
     });
 
     return () => unwatch();
